@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conpalett</title>
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --fg: #111111;
+      --muted: #666666;
+      --border: #e6e6e6;
+      --accent: #FFB400;
+    }
+    .theme-light { --bg: #FFFFFF; --fg: #111111; --muted: #666666; --border: #e6e6e6; --accent: #FFB400; }
+    .theme-dark { --bg: #111418; --fg: #F3F4F6; --muted: #9AA4B2; --border: #293142; --accent: #FFB400; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: var(--bg); color: var(--fg); }
+    header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    header h1 { margin: 0; font-size: 2em; font-weight: bold; }
+    .theme-toggle { display: inline-flex; align-items: center; }
+    .theme-toggle .toggle-text { margin-right: 8px; font-weight: 600; color: var(--muted); }
+    .switch { position: relative; display: inline-block; width: 48px; height: 28px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background: #cbd2d9; transition: .2s; border-radius: 999px; }
+    .slider:before { content: ""; position: absolute; height: 22px; width: 22px; left: 3px; top: 3px; background: #fff; transition: .2s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+    .switch input:checked + .slider { background: #6b7280; }
+    .switch input:checked + .slider:before { transform: translateX(20px); }
+    .container { padding: 16px 20px; display: grid; grid-template-columns: 1fr; gap: 16px; }
+
+    .controls { display: grid; gap: 14px 16px; align-items: start; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .controls .field { display: grid; grid-template-columns: 1fr; gap: 6px; }
+    .controls label { font-size: 15px; color: var(--fg); opacity: .85; font-weight: 600; }
+    .controls input[type="text"],
+    .controls input[type="number"],
+    .controls input[type="color"],
+    .controls select { width: 100%; padding: 12px 12px; border: 1px solid var(--border); border-radius: 12px; font: inherit; background: #fafafa; color: inherit; height: 44px; }
+    .controls input[type="color"] { padding: 0; height: 44px; }
+    .controls input[type="number"] { width: 100%; }
+    .controls .spacer { display: none; }
+    .exports { display: flex; gap: 8px; margin-top: 16px; }
+    .controls button, .exports button { appearance: none; border: 1px solid var(--border); background: #fff; color: var(--fg); padding: 10px 14px; border-radius: 12px; font: inherit; cursor: pointer; }
+    .controls button:hover, .exports button:hover { border-color: #d4d4d4; }
+    .theme-dark .controls input[type="text"],
+    .theme-dark .controls input[type="number"],
+    .theme-dark .controls input[type="color"],
+    .theme-dark .controls select { background: #1B2430; border-color: var(--border); color: var(--fg); }
+    .theme-dark .controls button, .theme-dark .exports button { background: #1B2430; border-color: var(--border); color: var(--fg); }
+
+    .preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .cell { padding: 16px 18px; border-radius: 12px; box-shadow: none; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; min-height: 110px; }
+    .cell .name { font-weight: 600; font-size: 16px; }
+    .cell code { font-size: 13px; opacity: .9; }
+    footer { padding: 8px 20px 16px; color: var(--muted); font-size: 12px; }
+    .sections { display: grid; gap: 28px; }
+    .section h2 { margin: 20px 0 12px; font-size: 20px; color: var(--muted); font-weight: 700; }
+
+    @media (max-width: 920px) {
+      .controls { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Conpalett</h1>
+    <div class="theme-toggle">
+      <span class="toggle-text">Nattläge</span>
+      <label class="switch">
+        <input id="themeToggle" type="checkbox" />
+        <span class="slider"></span>
+      </label>
+    </div>
+  </header>
+  <div class="container">
+    <div class="controls" id="controls">
+      <div class="field">
+        <label for="baseHex">Basfärg</label>
+        <input id="baseHex" type="text" value="#FFB400" />
+      </div>
+      <div class="field">
+        <label for="basePicker">Välj</label>
+        <input id="basePicker" type="color" value="#FFB400" />
+      </div>
+      
+      <div class="field">
+        <label for="steps">Steg</label>
+        <input id="steps" type="number" min="3" max="24" step="1" value="7" />
+      </div>
+      
+      <div class="field">
+        <label for="pname">Namn</label>
+        <input id="pname" type="text" value="anpassad" />
+      </div>
+      <div class="spacer"></div>
+      <div id="status" style="grid-column: 1 / -1; color: var(--muted);"></div>
+    </div>
+
+    
+    <div class="sections" id="sections"></div>
+    <div class="exports" id="exportsBottom">
+      <button id="btnCss">Exportera CSS</button>
+      <button id="btnJson">Exportera JSON</button>
+      <button id="btnHtml">Exportera HTML</button>
+    </div>
+  </div>
+  <footer>
+    Inga beroenden. Fungerar offline. Formler baserade på Oklab/OKLCH-konverteringar (Björn Ottosson).
+  </footer>
+
+  <script>
+    function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+    function hexNormalize(str) {
+      let s = String(str || '').trim();
+      if (!s) throw new Error('Ange en basfärg i hex.');
+      if (s[0] !== '#') s = '#' + s;
+      s = s.toLowerCase();
+      if (s.length === 4) { s = '#' + s[1]+s[1] + s[2]+s[2] + s[3]+s[3]; }
+      if (!/^#[0-9a-f]{6}$/i.test(s)) throw new Error('Förväntade #RRGGBB eller #RGB.');
+      return s.toUpperCase();
+    }
+
+    function srgbHexToRgbBytes(hx) {
+      const s = hexNormalize(hx).slice(1);
+      return [parseInt(s.slice(0,2),16), parseInt(s.slice(2,4),16), parseInt(s.slice(4,6),16)];
+    }
+
+    function srgbByteToLinear(byte) {
+      const c = byte / 255;
+      if (c <= 0.04045) return c / 12.92;
+      return Math.pow((c + 0.055) / 1.055, 2.4);
+    }
+
+    function contrastRatio(hex1, hex2) {
+      function relLum(hx) {
+        const [r8,g8,b8] = srgbHexToRgbBytes(hx);
+        const r = srgbByteToLinear(r8);
+        const g = srgbByteToLinear(g8);
+        const b = srgbByteToLinear(b8);
+        return 0.2126*r + 0.7152*g + 0.0722*b;
+      }
+      const L1 = relLum(hex1);
+      const L2 = relLum(hex2);
+      const [Llight, Ldark] = L1 >= L2 ? [L1, L2] : [L2, L1];
+      return (Llight + 0.05) / (Ldark + 0.05);
+    }
+
+    function srgbGammaCorrect(c) {
+      c = c < 0 ? 0 : (c > 1 ? 1 : c);
+      if (c <= 0.0031308) return 12.92 * c;
+      return 1.055 * Math.pow(c, 1/2.4) - 0.055;
+    }
+
+    function oklchToSrgbHex(L, C, hDeg) {
+      const h = (hDeg % 360) * Math.PI / 180;
+      const a = C * Math.cos(h);
+      const b = C * Math.sin(h);
+      const l_ = L + 0.3963377774*a + 0.2158037573*b;
+      const m_ = L - 0.1055613458*a - 0.0638541728*b;
+      const s_ = L - 0.0894841775*a - 1.2914855480*b;
+      const l = l_**3, m = m_**3, s = s_**3;
+      let r = +4.0767416621*l - 3.3077115913*m + 0.2309699292*s;
+      let g = -1.2684380046*l + 2.6097574011*m - 0.3413193965*s;
+      let b2 = -0.0041960863*l - 0.7034186147*m + 1.7076147010*s;
+      r = srgbGammaCorrect(r);
+      g = srgbGammaCorrect(g);
+      b2 = srgbGammaCorrect(b2);
+      const R = Math.round(clamp(r,0,1) * 255);
+      const G = Math.round(clamp(g,0,1) * 255);
+      const B = Math.round(clamp(b2,0,1) * 255);
+      return '#' + [R,G,B].map(v => v.toString(16).toUpperCase().padStart(2,'0')).join('');
+    }
+
+    function srgbHexToOklch(hex) {
+      const [r8,g8,b8] = srgbHexToRgbBytes(hex);
+      const r = srgbByteToLinear(r8);
+      const g = srgbByteToLinear(g8);
+      const b = srgbByteToLinear(b8);
+      const l = 0.4122214708*r + 0.5363325363*g + 0.0514459929*b;
+      const m = 0.2119034982*r + 0.6806995451*g + 0.1073969566*b;
+      const s = 0.0883024619*r + 0.2817188376*g + 0.6299787005*b;
+      const l_ = Math.cbrt(l);
+      const m_ = Math.cbrt(m);
+      const s_ = Math.cbrt(s);
+      const L = 0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_;
+      const a = 1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_;
+      const b2 = 0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_;
+      const C = Math.sqrt(a*a + b2*b2);
+      let h = Math.atan2(b2, a) * 180 / Math.PI; if (h < 0) h += 360;
+      return [L, C, h];
+    }
+
+    function generateLightnessScale(baseOKLCH, steps) {
+      let [L0, C0, h0] = baseOKLCH;
+      let Lmin = clamp(L0 - 0.40, 0.10, 0.98);
+      let Lmax = clamp(L0 + 0.40, 0.10, 0.98);
+      if (Lmin > Lmax) [Lmin, Lmax] = [Lmax, Lmin];
+      steps = Math.max(2, steps|0);
+      const values = Array.from({length: steps}, (_, i) => Lmin + i*(Lmax-Lmin)/(steps-1));
+      const map = {};
+      values.forEach((L, i) => {
+        const t = (L - Lmin) / ((Lmax - Lmin) + 1e-9);
+        const C = C0 * (0.85 + 0.30 * t * (1 - t));
+        map[`Steg ${i+1}`] = [L, C, h0];
+      });
+      return map;
+    }
+
+    function generateChromaScale(baseOKLCH, steps) {
+      const [L0, C0, h0] = baseOKLCH;
+      const Cmin = 0.00;
+      const Cmax = clamp(Math.max(C0 * 1.8, C0 + 0.10), 0.05, 0.35);
+      steps = Math.max(2, steps|0);
+      const values = Array.from({length: steps}, (_, i) => Cmin + i*(Cmax-Cmin)/(steps-1));
+      const map = {};
+      values.forEach((C, i) => { map[`Steg ${i+1}`] = [L0, C, h0]; });
+      return map;
+    }
+
+    function generateHueSweep(baseOKLCH, steps) {
+      const [L0, C0, h0] = baseOKLCH;
+      steps = Math.max(3, steps|0);
+      const delta = 360 / steps;
+      const map = {};
+      for (let i=0;i<steps;i++) {
+        const h = (h0 + i*delta) % 360;
+        map[`Nyans ${Math.round(h)}°`] = [L0, C0, h];
+      }
+      return map;
+    }
+
+    
+
+    function buildPalette(baseHex, type, steps) {
+      const baseOKLCH = srgbHexToOklch(baseHex);
+      const normalizeType = (t) => {
+        const s = String(t||'').toLowerCase();
+        if (s.includes('ljusskala') || s.includes('lightness')) return 'Lightness scale';
+        if (s.includes('kromaskala') || s.includes('chroma')) return 'Chroma scale';
+        if (s.includes('nyans') || s.includes('hue')) return 'Hue sweep';
+        return t;
+      };
+      const t = normalizeType(type);
+      let nameToOKLCH;
+      if (t === 'Lightness scale') nameToOKLCH = generateLightnessScale(baseOKLCH, steps);
+      else if (t === 'Chroma scale') nameToOKLCH = generateChromaScale(baseOKLCH, steps);
+      else if (t === 'Hue sweep') nameToOKLCH = generateHueSweep(baseOKLCH, steps);
+      else throw new Error('Unsupported palette type');
+      const nameToHex = {};
+      Object.entries(nameToOKLCH).forEach(([k, v]) => { nameToHex[k] = oklchToSrgbHex(v[0], v[1], v[2]); });
+      return { nameToOKLCH, nameToHex, baseOKLCH };
+    }
+
+    function slugify(text) { let s = String(text||'').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); return s || 'palette'; }
+
+    function autoText(bgHex) {
+      const black = '#111111';
+      const white = '#FFFFFF';
+      return contrastRatio(bgHex, white) >= contrastRatio(bgHex, black) ? white : black;
+    }
+
+    const baseHexEl = document.getElementById('baseHex');
+    const basePickerEl = document.getElementById('basePicker');
+    const stepsEl = document.getElementById('steps');
+    const nameEl = document.getElementById('pname');
+    const themeToggleEl = document.getElementById('themeToggle');
+    const statusEl = document.getElementById('status');
+    const btnCss = document.getElementById('btnCss');
+    const btnJson = document.getElementById('btnJson');
+    const btnHtml = document.getElementById('btnHtml');
+
+    function syncPickerFromText() {
+      try { basePickerEl.value = hexNormalize(baseHexEl.value).toLowerCase(); } catch (_) {}
+    }
+
+    function setStatus(text) { statusEl.textContent = text || ''; if (text) setTimeout(()=>{ if (statusEl.textContent === text) statusEl.textContent=''; }, 2000); }
+
+    function updatePreview() {
+      let baseHex;
+      try { baseHex = hexNormalize(baseHexEl.value); setStatus(''); }
+      catch (e) { setStatus(e.message); return; }
+      const steps = parseInt(stepsEl.value, 10) || 7;
+      renderAllSections(baseHex, steps);
+    }
+
+    function renderSection(container, title, nameToHex) {
+      const section = document.createElement('div');
+      section.className = 'section';
+      const h = document.createElement('h2');
+      h.textContent = title;
+      const grid = document.createElement('div');
+      grid.className = 'preview';
+      Object.entries(nameToHex).forEach(([name, hx]) => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.style.background = hx;
+        cell.style.color = autoText(hx);
+        const label = document.createElement('div');
+        label.className = 'name';
+        label.textContent = name;
+        const code = document.createElement('code');
+        code.textContent = hx;
+        cell.appendChild(label);
+        cell.appendChild(code);
+        grid.appendChild(cell);
+      });
+      section.appendChild(h);
+      section.appendChild(grid);
+      container.appendChild(section);
+    }
+
+    function renderAllSections(baseHex, steps) {
+      const container = document.getElementById('sections');
+      container.innerHTML = '';
+      const variants = [
+        { label: 'Ljusskala', type: 'Lightness scale' },
+        { label: 'Kromaskala', type: 'Chroma scale' },
+        { label: 'Nyanssvep', type: 'Hue sweep' },
+      ];
+      variants.forEach(v => {
+        const { nameToHex } = buildPalette(baseHex, v.type, steps);
+        renderSection(container, v.label, nameToHex);
+      });
+    }
+
+
+    baseHexEl.addEventListener('input', () => { syncPickerFromText(); updatePreview(); });
+    basePickerEl.addEventListener('input', () => { baseHexEl.value = basePickerEl.value.toUpperCase(); updatePreview(); });
+    stepsEl.addEventListener('input', updatePreview);
+    nameEl.addEventListener('input', () => {});
+    themeToggleEl.addEventListener('change', () => {
+      const checked = themeToggleEl.checked;
+      const v = checked ? 'theme-dark' : 'theme-light';
+      document.body.classList.remove('theme-dark', 'theme-light');
+      document.body.classList.add(v);
+    });
+
+    // ---------------------------- Exports ----------------------------
+    function download(filename, text, type='text/plain') {
+      const blob = new Blob([text], {type});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+    }
+
+    function exportCSS(sections, baseName) {
+      const slug = slugify(baseName);
+      const lines = [':root {'];
+      sections.forEach(sec => {
+        const cat = slugify(sec.label);
+        Object.entries(sec.nameToHex).forEach(([k, hx]) => {
+          lines.push(`  --${slug}-${cat}-${slugify(k)}: ${hx};`);
+        });
+      });
+      lines.push('}');
+      return lines.join('\n');
+    }
+
+    function exportJSON(sections, baseHex, baseOKLCH, paletteName) {
+      const payload = {
+        name: paletteName,
+        base: { hex: baseHex, oklch: [baseOKLCH[0], baseOKLCH[1], baseOKLCH[2]] },
+        sections: sections.map(sec => ({
+          label: sec.label,
+          colors: Object.keys(sec.nameToHex).map(k => ({ name: k, hex: sec.nameToHex[k], oklch: sec.nameToOKLCH[k] }))
+        }))
+      };
+      return JSON.stringify(payload, null, 2);
+    }
+
+    function exportHTML(sections, title) {
+      function autoTextLocal(bgHex) { return autoText(bgHex); }
+      const secHtml = sections.map(sec => {
+        const cells = Object.entries(sec.nameToHex).map(([name, hx]) => {
+          return `<div class="cell" style="background:${hx};color:${autoTextLocal(hx)}"><div class="name">${name}</div><code>${hx}</code></div>`;
+        }).join('\n');
+        return `<h2 style="margin:20px 0 12px; font-size:20px; color:#666; font-weight:700;">${sec.label}</h2>\n<div class="preview">\n${cells}\n</div>`;
+      }).join('\n');
+      return `<!doctype html>\n<html lang="sv">\n<meta charset="utf-8">\n<title>${title}</title>\n<style>\n  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; }\n  h1 { margin-top: 0; }\n  .preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }\n  .cell { padding: 16px 18px; border-radius: 12px; box-shadow: none; display:flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; min-height: 110px; }\n  .cell .name { font-weight: 600; font-size: 16px; }\n  code { font-size: 13px; opacity: .9; }\n</style>\n<h1>${title}</h1>\n${secHtml}\n</html>`;
+    }
+
+    function titleForExport() {
+      const n = (nameEl.value || 'anpassad').trim();
+      return `${n}-alla`;
+    }
+
+    btnCss.addEventListener('click', () => {
+      try {
+        const baseHex = hexNormalize(baseHexEl.value);
+        const steps = parseInt(stepsEl.value, 10) || 7;
+        const baseOKLCH = srgbHexToOklch(baseHex);
+        const sections = [
+          (() => { const r = buildPalette(baseHex, 'Lightness scale', steps); return { label: 'Ljusskala', ...r }; })(),
+          (() => { const r = buildPalette(baseHex, 'Chroma scale', steps); return { label: 'Kromaskala', ...r }; })(),
+          (() => { const r = buildPalette(baseHex, 'Hue sweep', steps); return { label: 'Nyanssvep', ...r }; })(),
+        ];
+        const title = titleForExport();
+        const css = exportCSS(sections, title);
+        download(`palette_${slugify(title)}.css`, css, 'text/css');
+        setStatus('CSS nedladdad');
+      } catch (e) { alert(e.message); }
+    });
+
+    btnJson.addEventListener('click', () => {
+      try {
+        const baseHex = hexNormalize(baseHexEl.value);
+        const steps = parseInt(stepsEl.value, 10) || 7;
+        const baseOKLCH = srgbHexToOklch(baseHex);
+        const sections = [
+          (() => { const r = buildPalette(baseHex, 'Lightness scale', steps); return { label: 'Ljusskala', ...r }; })(),
+          (() => { const r = buildPalette(baseHex, 'Chroma scale', steps); return { label: 'Kromaskala', ...r }; })(),
+          (() => { const r = buildPalette(baseHex, 'Hue sweep', steps); return { label: 'Nyanssvep', ...r }; })(),
+        ];
+        const title = titleForExport();
+        const json = exportJSON(sections, baseHex, baseOKLCH, title);
+        download(`palette_${slugify(title)}.json`, json, 'application/json');
+        setStatus('JSON nedladdad');
+      } catch (e) { alert(e.message); }
+    });
+
+    btnHtml.addEventListener('click', () => {
+      try {
+        const baseHex = hexNormalize(baseHexEl.value);
+        const steps = parseInt(stepsEl.value, 10) || 7;
+        const sections = [
+          (() => { const r = buildPalette(baseHex, 'Lightness scale', steps); return { label: 'Ljusskala', ...r }; })(),
+          (() => { const r = buildPalette(baseHex, 'Chroma scale', steps); return { label: 'Kromaskala', ...r }; })(),
+          (() => { const r = buildPalette(baseHex, 'Hue sweep', steps); return { label: 'Nyanssvep', ...r }; })(),
+        ];
+        const title = titleForExport();
+        const html = exportHTML(sections, title);
+        download(`preview_${slugify(title)}.html`, html, 'text/html');
+        setStatus('HTML nedladdad');
+      } catch (e) { alert(e.message); }
+    });
+
+    // Initialize
+    document.body.classList.add('theme-light');
+    themeToggleEl.checked = false;
+    syncPickerFromText();
+    updatePreview();
+  </script>
+</body>
+</html>
+
+
